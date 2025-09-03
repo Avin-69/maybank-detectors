@@ -1,47 +1,42 @@
-import os
-from flask import Flask, jsonify, request
+from flask import Flask, request, jsonify
 
 app = Flask(__name__)
 
-# --- Detector endpoints ---
+def handle_image_upload(detector_name, stub_confidence=0.95):
+    """
+    Generic handler for detectors:
+    - Expects a multipart/form-data POST with field 'image'
+    - Returns detector name, filename, and a stubbed confidence score
+    """
+    if "image" not in request.files:
+        return jsonify({"error": "No image uploaded"}), 400
+    
+    image_file = request.files["image"]
 
-@app.route('/logo/template', methods=['POST'])
+    return jsonify({
+        "detector": detector_name,
+        "pass": True,                      # Stub: always passes
+        "filename": image_file.filename,   # Echo filename
+        "confidence": stub_confidence      # Stub confidence score
+    })
+
+@app.route("/logo/template", methods=["POST"])
 def logo_template():
-    # Stub response for now — replace with real OpenCV logic later
-    return jsonify({
-        "detector": "logo_template_match",
-        "pass": True,
-        "confidence": 0.95,
-        "details": {
-            "matched_template": "maybank_logo_master.png"
-        }
-    })
+    return handle_image_upload("logo_template_match", 0.97)
 
-
-@app.route('/logo/clearspace', methods=['POST'])
+@app.route("/logo/clearspace", methods=["POST"])
 def logo_clearspace():
-    # Stub response for now — replace with real bounding box logic later
-    return jsonify({
-        "detector": "logo_clearspace",
-        "pass": False,
-        "measured_ratio": 0.18,
-        "required_ratio": 0.25
-    })
+    return handle_image_upload("logo_clearspace", 0.92)
 
-
-@app.route('/colours/palette', methods=['POST'])
+@app.route("/colours/palette", methods=["POST"])
 def colours_palette():
-    # Stub response for now — replace with real ΔE colour comparison later
-    return jsonify({
-        "detector": "palette_deltaE",
-        "pass": False,
-        "found_colour": "#FFD700",
-        "closest_allowed": "Maybank Yellow",
-        "deltaE": 8.2
-    })
+    return handle_image_upload("palette_deltaE", 0.89)
 
+# Root health check (optional)
+@app.route("/", methods=["GET"])
+def health_check():
+    return jsonify({"status": "ok", "message": "Maybank detectors API running"}), 200
 
-# --- Railway / Local run configuration ---
-if __name__ == '__main__':
-    port = int(os.environ.get("PORT", 5000))  # Railway provides PORT
-    app.run(host="0.0.0.0", port=port)
+if __name__ == "__main__":
+    # Bind to all interfaces so Render can reach it
+    app.run(host="0.0.0.0", port=5000)
